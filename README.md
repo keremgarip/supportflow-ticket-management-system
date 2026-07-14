@@ -104,14 +104,14 @@ Main database tables:
 
 ## Project Status
 
-Currently in planning phase.
+Currently in design phase.
 
-Week 1 focus:
+Week 2 focus:
 
-* GitHub repository
-* README draft
-* Feature list
-* Role list
-* Ticket status list
+* Database and table creation
+* ERD/database relations
+* Entity list
+* Table fields
+* Relation logic
 * Database table draft
 
