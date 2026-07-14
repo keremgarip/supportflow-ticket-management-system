@@ -113,5 +113,4 @@ Week 2 focus:
 * Entity list
 * Table fields
 * Relation logic
-* Database table draft
 
