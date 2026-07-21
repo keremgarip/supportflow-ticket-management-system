@@ -1,0 +1,6 @@
+@SupportFlow.api_HostAddress = http://localhost:5219
+
+GET {{SupportFlow.api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
