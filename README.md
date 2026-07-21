@@ -104,13 +104,13 @@ Main database tables:
 
 ## Project Status
 
-Currently in design phase.
+Currently in backend development phase.
 
-Week 2 focus:
+Week 3 focus:
 
-* Database and table creation
-* ERD/database relations
-* Entity list
-* Table fields
-* Relation logic
+* Backend project setup
+* Entity and table creations
+* First migration
+* Database connection
+* Endpoint testing
 
