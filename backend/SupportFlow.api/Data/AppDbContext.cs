@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SupportFlow.Api.Models;
 
 namespace SupportFlow.Api.Data;
 
@@ -8,4 +9,29 @@ public class AppDbContext : DbContext
     {
         
     }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketCategory> TicketCategories => Set<TicketCategory>();
+    public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
+    public DbSet<TicketStatusHistory> TicketStatusHistories => Set<TicketStatusHistory>();
+    public DbSet<TicketAttachment> TicketAttachments => Set<TicketAttachment>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Ticket>()
+            .HasOne(ticket => ticket.Customer)
+            .WithMany(user => user.CreatedTickets)
+            .HasForeignKey(ticket => ticket.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Ticket>()
+            .HasOne(ticket => ticket.AssignedAgent)
+            .WithMany(user => user.AssignedTickets)
+            .HasForeignKey(ticket => ticket.AssignedAgentId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }      
 }
