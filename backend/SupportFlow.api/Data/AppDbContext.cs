@@ -22,16 +22,8 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Ticket>()
-            .HasOne(ticket => ticket.Customer)
-            .WithMany(user => user.CreatedTickets)
-            .HasForeignKey(ticket => ticket.CustomerId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<Ticket>()
-            .HasOne(ticket => ticket.AssignedAgent)
-            .WithMany(user => user.AssignedTickets)
-            .HasForeignKey(ticket => ticket.AssignedAgentId)
-            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(AppDbContext).Assembly);
+        
     }      
 }

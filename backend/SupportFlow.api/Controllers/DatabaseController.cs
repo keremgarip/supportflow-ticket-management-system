@@ -9,13 +9,19 @@ namespace SupportFlow.Api.Controllers;
 public class DatabaseController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IWebHostEnvironment _environment;
 
-    public DatabaseController(AppDbContext context)
+    public DatabaseController(
+        AppDbContext context,
+        IWebHostEnvironment environment)
     {
         _context = context;
+        _environment = environment;
     }
 
     [HttpGet("health")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CheckConnection(
         CancellationToken cancellationToken)
     {
@@ -43,14 +49,18 @@ public class DatabaseController : ControllerBase
         }
         catch (Exception exception)
         {
+            var response = new
+            {
+                success = false,
+                message = "Database connection failed.",
+                error = _environment.IsDevelopment()
+                    ? exception.Message
+                    : null
+            };
+
             return StatusCode(
                 StatusCodes.Status503ServiceUnavailable,
-                new
-                {
-                    success = false,
-                    message = "Database connection failed.",
-                    error = exception.Message
-                });
+                response);
         }
     }
 }
