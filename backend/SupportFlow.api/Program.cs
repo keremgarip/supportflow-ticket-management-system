@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SupportFlow.Api.Data;
+using SupportFlow.Api.Interfaces;
+using SupportFlow.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,8 @@ var connectionString =
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
