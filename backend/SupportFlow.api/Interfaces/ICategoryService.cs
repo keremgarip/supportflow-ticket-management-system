@@ -8,6 +8,6 @@ public interface ICategoryService
     Task<CategoryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<CategoryDto> CreateAsync(CreateCategoryDto dto, CancellationToken cancellationToken = default);
     Task<CategoryDto?> UpdateAsync(int id, UpdateCategoryDto dto, CancellationToken cancellationToken = default);
-    Task<CategoryDto?> DeleteAsync(int id, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<bool> NameExistsAsync(string name, int? excludedCategoryId = null, CancellationToken cancellationToken = default);
 }

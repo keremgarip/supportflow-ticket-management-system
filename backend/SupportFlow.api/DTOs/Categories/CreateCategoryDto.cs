@@ -1,10 +1,14 @@
 using System.ComponentModel.DataAnnotations;
+using SupportFlow.Api.Helpers;
 
 namespace SupportFlow.Api.DTOs.Categories;
 
 public class CreateCategoryDto
 {
     [Required]
+    [NotWhiteSpace(
+        ErrorMessage = "Category name cannot be empty or whitespace."
+    )]
     [StringLength(
         100,
         MinimumLength = 2,

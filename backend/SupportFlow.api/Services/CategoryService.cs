@@ -54,12 +54,21 @@ public class CategoryService : ICategoryService
         CreateCategoryDto dto,
         CancellationToken cancellationToken = default)
     {
+        var normalizedName = dto.Name.Trim();
+
+        if (normalizedName.Length < 2)
+        {
+            throw new ArgumentException(
+                "Category name must contain at least 2 non-whitespace characters.");
+        }
+
         var category = new TicketCategory
         {
-            Name = dto.Name.Trim(),
+            Name = normalizedName,
             Description = NormalizeDescription(dto.Description),
             IsActive = true
         };
+
 
         _context.TicketCategories.Add(category);
         await _context.SaveChangesAsync(cancellationToken);
@@ -82,7 +91,15 @@ public class CategoryService : ICategoryService
             return null;
         }
 
-        category.Name = dto.Name.Trim();
+        var normalizedName = dto.Name.Trim();
+
+        if (normalizedName.Length < 2)
+        {
+            throw new ArgumentException(
+                "Category name must contain at least 2 non-whitespace characters.");
+        }
+
+        category.Name = normalizedName;
         category.Description = NormalizeDescription(dto.Description);
         category.IsActive = dto.IsActive;
 
@@ -156,10 +173,5 @@ public class CategoryService : ICategoryService
         }
 
         return description.Trim();
-    }
-
-    Task<CategoryDto?> ICategoryService.DeleteAsync(int id, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
     }
 }
