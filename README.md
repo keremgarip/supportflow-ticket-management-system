@@ -106,11 +106,12 @@ Main database tables:
 
 Currently in backend development phase.
 
-Week 3 focus:
+Week 4 focus:
 
-* Backend project setup
-* Entity and table creations
-* First migration
+* Ticket CRUD
+* Category CRUD
 * Database connection
-* Endpoint testing
+* Entity Framework migration
+* Swagger tests
+* Service structure
 
