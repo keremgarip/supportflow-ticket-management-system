@@ -132,6 +132,7 @@ Main database tables:
 
 ## Backend Structure
 
+```text
 SupportFlow.Api
 ├── Controllers
 ├── Data
