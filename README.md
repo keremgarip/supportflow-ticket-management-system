@@ -102,16 +102,72 @@ Main database tables:
 * TicketAttachments
 * Notifications
 
+## Current API Endpoints
+
+### Database
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/database/health` | Checks the database connection |
+
+### Categories
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/categories` | Returns all categories |
+| GET | `/api/categories/{id}` | Returns a category by ID |
+| POST | `/api/categories` | Creates a category |
+| PUT | `/api/categories/{id}` | Updates a category |
+| DELETE | `/api/categories/{id}` | Deletes or deactivates a category |
+
+### Tickets
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/tickets` | Returns all tickets |
+| GET | `/api/tickets/{id}` | Returns ticket details |
+| POST | `/api/tickets` | Creates a new ticket |
+| PUT | `/api/tickets/{id}` | Updates a ticket |
+| DELETE | `/api/tickets/{id}` | Deletes a ticket |
+
+## Backend Structure
+
+SupportFlow.Api
+├── Controllers
+├── Data
+│   └── Configurations
+├── DTOs
+│   ├── Categories
+│   └── Tickets
+├── Helpers
+├── Interfaces
+├── Middleware
+├── Migrations
+├── Models
+├── Repositories
+└── Services
+
+## Current Limitations
+
+- Authentication has not been implemented yet.
+- Customer IDs are temporarily supplied in ticket creation requests.
+- Ticket assignment and status update endpoints are not available yet.
+- Ticket messages, notifications and file attachments are planned for later phases.
+- Authorization rules will be added after JWT authentication.
+
 ## Project Status
 
-Currently in backend development phase.
+The first month of backend development has been completed.
 
-Week 4 focus:
+Completed:
 
-* Ticket CRUD
-* Category CRUD
-* Database connection
-* Entity Framework migration
-* Swagger tests
-* Service structure
+- Project planning and feature definition
+- Database design
+- ASP.NET Core Web API setup
+- PostgreSQL and Entity Framework Core configuration
+- Initial database migration
+- Category CRUD operations
+- Ticket CRUD operations
+- DTO and service layer structure
+- Swagger and Insomnia API testing
 
