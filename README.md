@@ -150,6 +150,9 @@ SupportFlow.Api
 
 ## Current Limitations
 
+```markdown
+## Current Limitations
+
 - Authentication has not been implemented yet.
 - Customer IDs are temporarily supplied in ticket creation requests.
 - Ticket assignment and status update endpoints are not available yet.
