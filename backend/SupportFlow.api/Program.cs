@@ -13,6 +13,7 @@ var connectionString =
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 
@@ -20,6 +21,14 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var seeder = scope.ServiceProvider
+        .GetRequiredService<DbSeeder>();
+
+    await seeder.SeedAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

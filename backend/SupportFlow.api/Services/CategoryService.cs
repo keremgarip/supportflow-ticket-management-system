@@ -141,13 +141,13 @@ public class CategoryService : ICategoryService
         int? excludedCategoryId = null,
         CancellationToken cancellationToken = default)
     {
-        var normalizedName = name.Trim().ToLower();
+        var normalizedName = name.Trim();
 
         return await _context.TicketCategories
             .AsNoTracking()
             .AnyAsync(
                 category =>
-                    category.Name.ToLower() == normalizedName &&
+                    EF.Functions.ILike(category.Name, normalizedName) &&
                     (!excludedCategoryId.HasValue ||
                      category.Id != excludedCategoryId.Value),
                 cancellationToken);
