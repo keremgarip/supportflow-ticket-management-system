@@ -132,7 +132,6 @@ Main database tables:
 
 ## Backend Structure
 
-```text
 SupportFlow.Api
 ├── Controllers
 ├── Data
@@ -148,9 +147,6 @@ SupportFlow.Api
 ├── Repositories
 └── Services
 
-## Current Limitations
-
-```markdown
 ## Current Limitations
 
 - Authentication has not been implemented yet.
