@@ -1,0 +1,111 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using SupportFlow.Api.Data;
+using SupportFlow.Api.DTOs.Auth;
+using SupportFlow.Api.Interfaces;
+using SupportFlow.Api.Models;
+
+namespace SupportFlow.Api.Services;
+
+public class AuthService : IAuthService
+{
+    private readonly AppDbContext _context;
+    private readonly IPasswordHasher<User> _passwordHasher;
+
+    public AuthService(
+        AppDbContext context,
+        IPasswordHasher<User> passwordHasher)
+    {
+        _context = context;
+        _passwordHasher = passwordHasher;
+    }
+
+    public async Task<RegisterResponseDto> RegisterAsync(
+        RegisterDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = NormalizeEmail(dto.Email);
+
+        var user = new User
+        {
+            FullName = dto.FullName.Trim(),
+            Email = normalizedEmail,
+            Role = "Customer",
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
+
+        user.PasswordHash = _passwordHasher.HashPassword(
+            user,
+            dto.Password);
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new RegisterResponseDto
+        {
+            Message = "User registered successfully.",
+            User = MapToAuthUserDto(user)
+        };
+    }
+
+    public async Task<AuthResponseDto?> LoginAsync(
+        LoginDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        await Task.CompletedTask;
+
+        throw new NotImplementedException(
+            "Login will be implemented on a later day.");
+    }
+
+    public async Task<AuthUserDto?> GetCurrentUserAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => new AuthUserDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                Role = user.Role,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<bool> EmailExistsAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = NormalizeEmail(email);
+
+        return await _context.Users
+            .AsNoTracking()
+            .AnyAsync(
+                user => user.Email == normalizedEmail,
+                cancellationToken);
+    }
+
+    private static string NormalizeEmail(string email)
+    {
+        return email.Trim().ToLowerInvariant();
+    }
+
+    private static AuthUserDto MapToAuthUserDto(User user)
+    {
+        return new AuthUserDto
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        };
+    }
+}

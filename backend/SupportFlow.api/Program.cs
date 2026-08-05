@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using SupportFlow.Api.Data;
 using SupportFlow.Api.Interfaces;
 using SupportFlow.Api.Services;
+using Microsoft.AspNetCore.Identity;
+using SupportFlow.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,8 +16,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<DbSeeder>();
+
+builder.Services.AddScoped<
+    IPasswordHasher<User>,
+    PasswordHasher<User>>();
+
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
