@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SupportFlow.Api.Data;
 using SupportFlow.Api.DTOs.Auth;
+using SupportFlow.Api.Helpers;
 using SupportFlow.Api.Interfaces;
 using SupportFlow.Api.Models;
 
@@ -11,16 +13,22 @@ public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly ITokenService _tokenService;
+    private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         AppDbContext context,
-        IPasswordHasher<User> passwordHasher)
+        IPasswordHasher<User> passwordHasher,
+        ITokenService tokenService,
+        IOptions<JwtSettings> jwtOptions)
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _tokenService = tokenService;
+        _jwtSettings = jwtOptions.Value;
     }
 
-    public async Task<RegisterResponseDto> RegisterAsync(
+    public async Task<AuthResponseDto> RegisterAsync(
         RegisterDto dto,
         CancellationToken cancellationToken = default)
     {
@@ -42,9 +50,17 @@ public class AuthService : IAuthService
         _context.Users.Add(user);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new RegisterResponseDto
+        var expiresAt = DateTime.UtcNow.AddMinutes(
+            _jwtSettings.ExpirationMinutes);
+
+        var token = _tokenService.CreateToken(
+            user,
+            expiresAt);
+
+        return new AuthResponseDto
         {
-            Message = "User registered successfully.",
+            Token = token,
+            ExpiresAt = expiresAt,
             User = MapToAuthUserDto(user)
         };
     }
@@ -56,7 +72,7 @@ public class AuthService : IAuthService
         await Task.CompletedTask;
 
         throw new NotImplementedException(
-            "Login will be implemented on a later day.");
+            "Login will be implemented on the next day.");
     }
 
     public async Task<AuthUserDto?> GetCurrentUserAsync(

@@ -17,11 +17,11 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [ProducesResponseType(
-        typeof(RegisterResponseDto),
+        typeof(AuthResponseDto),
         StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<RegisterResponseDto>> Register(RegisterDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto, CancellationToken cancellationToken)
     {
         var emailExists = await _authService.EmailExistsAsync(dto.Email, cancellationToken);
 
