@@ -7,6 +7,7 @@ using SupportFlow.Api.Data;
 using SupportFlow.Api.Helpers;
 using SupportFlow.Api.Interfaces;
 using SupportFlow.Api.Models;
+using SupportFlow.Api.OpenApi;
 using SupportFlow.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -98,7 +99,10 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
 
 var app = builder.Build();
 

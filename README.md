@@ -130,6 +130,14 @@ Main database tables:
 | PUT | `/api/tickets/{id}` | Updates a ticket |
 | DELETE | `/api/tickets/{id}` | Deletes a ticket |
 
+### Authentication
+
+| Method | Endpoint | Description | Authentication |
+|---|---|---|---|
+| POST | `/api/auth/register` | Registers a new customer account | No |
+| POST | `/api/auth/login` | Authenticates a user and returns a JWT | No |
+| GET | `/api/auth/me` | Returns the authenticated user's information | Bearer JWT |
+
 ## Backend Structure
 
 SupportFlow.Api
@@ -149,11 +157,20 @@ SupportFlow.Api
 
 ## Current Limitations
 
-- Authentication has not been implemented yet.
+- JWT authentication is implemented.
+- Role-based authorization will be expanded in later phases.
 - Customer IDs are temporarily supplied in ticket creation requests.
 - Ticket assignment and status update endpoints are not available yet.
 - Ticket messages, notifications and file attachments are planned for later phases.
 - Authorization rules will be added after JWT authentication.
+
+### Authentication
+
+- Passwords are stored as hashes using ASP.NET Core PasswordHasher.
+- New public registrations receive the Customer role.
+- Login returns a signed JWT bearer token.
+- JWT validation checks issuer, audience, signature, and expiration.
+- Authenticated endpoints use the `Authorization: Bearer <token>` header.
 
 ## Project Status
 

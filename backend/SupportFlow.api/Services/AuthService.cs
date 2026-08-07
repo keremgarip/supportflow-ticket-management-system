@@ -66,13 +66,58 @@ public class AuthService : IAuthService
     }
 
     public async Task<AuthResponseDto?> LoginAsync(
-        LoginDto dto,
-        CancellationToken cancellationToken = default)
+    LoginDto dto,
+    CancellationToken cancellationToken = default)
     {
-        await Task.CompletedTask;
+        var normalizedEmail = NormalizeEmail(dto.Email);
 
-        throw new NotImplementedException(
-            "Login will be implemented on the next day.");
+        var user = await _context.Users
+            .SingleOrDefaultAsync(
+                user => user.Email == normalizedEmail,
+                cancellationToken);
+
+        if (user is null || !user.IsActive)
+        {
+            return null;
+        }
+
+        var verificationResult =
+            _passwordHasher.VerifyHashedPassword(
+                user,
+                user.PasswordHash,
+                dto.Password);
+
+        if (verificationResult ==
+            PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+
+        if (verificationResult ==
+            PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            user.PasswordHash =
+                _passwordHasher.HashPassword(
+                    user,
+                    dto.Password);
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+        }
+
+        var expiresAt = DateTime.UtcNow.AddMinutes(
+            _jwtSettings.ExpirationMinutes);
+
+        var token = _tokenService.CreateToken(
+            user,
+            expiresAt);
+
+        return new AuthResponseDto
+        {
+            Token = token,
+            ExpiresAt = expiresAt,
+            User = MapToAuthUserDto(user)
+        };
     }
 
     public async Task<AuthUserDto?> GetCurrentUserAsync(
