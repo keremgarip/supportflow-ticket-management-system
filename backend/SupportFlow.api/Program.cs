@@ -85,13 +85,37 @@ builder.Services
             };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        AppPolicies.CustomerOnly,
+        policy =>
+            policy.RequireRole(
+                AppRoles.Customer));
+
+    options.AddPolicy(
+        AppPolicies.AgentOrAdmin,
+        policy =>
+            policy.RequireRole(
+                AppRoles.SupportAgent,
+                AppRoles.Admin));
+
+    options.AddPolicy(
+        AppPolicies.AdminOnly,
+        policy =>
+            policy.RequireRole(
+                AppRoles.Admin));
+});
+
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddScoped<
     IPasswordHasher<User>,
     PasswordHasher<User>>();
+
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();

@@ -11,10 +11,12 @@ namespace SupportFlow.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, ICurrentUserService currentUserService)
     {
         _authService = authService;
+        _currentUserService = currentUserService;
     }
 
     [HttpPost("register")]
@@ -72,14 +74,10 @@ public class AuthController : ControllerBase
     typeof(AuthUserDto),
     StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AuthUserDto>> GetCurrentUser(
     CancellationToken cancellationToken)
     {
-        var userIdValue = User.FindFirstValue(
-            ClaimTypes.NameIdentifier);
-
-        if (!int.TryParse(userIdValue, out var userId))
+        if (!_currentUserService.UserId.HasValue)
         {
             return Unauthorized(new
             {
@@ -89,7 +87,7 @@ public class AuthController : ControllerBase
         }
 
         var user = await _authService.GetCurrentUserAsync(
-            userId,
+            _currentUserService.UserId.Value,
             cancellationToken);
 
         if (user is null || !user.IsActive)
@@ -97,7 +95,8 @@ public class AuthController : ControllerBase
             return Unauthorized(new
             {
                 success = false,
-                message = "The authenticated user is no longer available."
+                message =
+                    "The authenticated user is no longer available."
             });
         }
 
