@@ -75,6 +75,7 @@ public class TicketService : ITicketService
 
     public async Task<TicketDetailDto> CreateAsync(
         CreateTicketDto dto,
+        int customerId,
         CancellationToken cancellationToken = default)
     {
         var ticket = new Ticket
@@ -84,7 +85,7 @@ public class TicketService : ITicketService
             Status = "Open",
             Priority = dto.Priority,
             CategoryId = dto.CategoryId,
-            CustomerId = dto.CustomerId,
+            CustomerId = customerId,
             AssignedAgentId = null,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -170,5 +171,124 @@ public class TicketService : ITicketService
                     user.IsActive &&
                     user.Role == "Customer",
                 cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TicketListDto>> GetByCustomerIdAsync(
+    int customerId,
+    CancellationToken cancellationToken = default)
+    {
+        return await _context.Tickets
+            .AsNoTracking()
+            .Where(ticket => ticket.CustomerId == customerId)
+            .OrderByDescending(ticket => ticket.CreatedAt)
+            .Select(ticket => new TicketListDto
+            {
+                Id = ticket.Id,
+                Title = ticket.Title,
+                Status = ticket.Status,
+                Priority = ticket.Priority,
+                CategoryId = ticket.CategoryId,
+                CategoryName = ticket.Category.Name,
+                CustomerId = ticket.CustomerId,
+                CustomerName = ticket.Customer.FullName,
+                AssignedAgentId = ticket.AssignedAgentId,
+                AssignedAgentName = ticket.AssignedAgent == null
+                    ? null
+                    : ticket.AssignedAgent.FullName,
+                CreatedAt = ticket.CreatedAt,
+                UpdatedAt = ticket.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+    }
+    public async Task<TicketDetailDto?> GetCustomerTicketByIdAsync(
+    int ticketId,
+    int customerId,
+    CancellationToken cancellationToken = default)
+    {
+        return await _context.Tickets
+            .AsNoTracking()
+            .Where(ticket =>
+                ticket.Id == ticketId &&
+                ticket.CustomerId == customerId)
+            .Select(ticket => new TicketDetailDto
+            {
+                Id = ticket.Id,
+                Title = ticket.Title,
+                Description = ticket.Description,
+                Status = ticket.Status,
+                Priority = ticket.Priority,
+                CategoryId = ticket.CategoryId,
+                CategoryName = ticket.Category.Name,
+                CustomerId = ticket.CustomerId,
+                CustomerName = ticket.Customer.FullName,
+                CustomerEmail = ticket.Customer.Email,
+                AssignedAgentId = ticket.AssignedAgentId,
+                AssignedAgentName = ticket.AssignedAgent == null
+                    ? null
+                    : ticket.AssignedAgent.FullName,
+                CreatedAt = ticket.CreatedAt,
+                UpdatedAt = ticket.UpdatedAt,
+                ClosedAt = ticket.ClosedAt,
+                MessageCount = ticket.Messages.Count,
+                AttachmentCount = ticket.Attachments.Count
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+    public async Task<TicketDetailDto?> UpdateCustomerTicketAsync(
+    int ticketId,
+    int customerId,
+    UpdateTicketDto dto,
+    CancellationToken cancellationToken = default)
+    {
+        var ticket = await _context.Tickets
+            .SingleOrDefaultAsync(
+                ticket =>
+                    ticket.Id == ticketId &&
+                    ticket.CustomerId == customerId,
+                cancellationToken);
+
+        if (ticket is null)
+        {
+            return null;
+        }
+
+        ticket.Title = dto.Title.Trim();
+        ticket.Description = dto.Description.Trim();
+        ticket.Priority = dto.Priority;
+        ticket.CategoryId = dto.CategoryId;
+        ticket.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(
+            cancellationToken);
+
+        return await GetCustomerTicketByIdAsync(
+            ticketId,
+            customerId,
+            cancellationToken);
+    }
+
+    public async Task<bool> DeleteCustomerTicketAsync(
+        int ticketId,
+        int customerId,
+        CancellationToken cancellationToken = default)
+    {
+        var ticket = await _context.Tickets
+            .SingleOrDefaultAsync(
+                ticket =>
+                    ticket.Id == ticketId &&
+                    ticket.CustomerId == customerId,
+                    cancellationToken
+            );
+        
+        if (ticket is null)
+        {
+            return false;
+        }
+
+        _context.Tickets.Remove(ticket);
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 }

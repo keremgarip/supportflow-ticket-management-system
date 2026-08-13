@@ -39,10 +39,4 @@ public class CreateTicketDto
         int.MaxValue,
         ErrorMessage = "CategoryId must be greater than zero.")]
     public int CategoryId { get; set; }
-
-    [Range(
-        1,
-        int.MaxValue,
-        ErrorMessage = "CustomerId must be greater than zero.")]
-    public int CustomerId { get; set; }
 }
