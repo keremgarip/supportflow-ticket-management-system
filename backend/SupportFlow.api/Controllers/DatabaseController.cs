@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SupportFlow.Api.Data;
+using SupportFlow.Api.Helpers;
 
 namespace SupportFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = AppPolicies.AdminOnly)]
 public class DatabaseController : ControllerBase
 {
     private readonly AppDbContext _context;

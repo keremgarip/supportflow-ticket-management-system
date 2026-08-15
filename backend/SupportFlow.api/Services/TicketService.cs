@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SupportFlow.Api.Data;
 using SupportFlow.Api.DTOs.Tickets;
+using SupportFlow.Api.Helpers;
 using SupportFlow.Api.Interfaces;
 using SupportFlow.Api.Models;
 
@@ -159,20 +160,6 @@ public class TicketService : ITicketService
                 cancellationToken);
     }
 
-    public async Task<bool> CustomerIsValidAsync(
-        int customerId,
-        CancellationToken cancellationToken = default)
-    {
-        return await _context.Users
-            .AsNoTracking()
-            .AnyAsync(
-                user =>
-                    user.Id == customerId &&
-                    user.IsActive &&
-                    user.Role == "Customer",
-                cancellationToken);
-    }
-
     public async Task<IReadOnlyList<TicketListDto>> GetByCustomerIdAsync(
     int customerId,
     CancellationToken cancellationToken = default)
@@ -290,5 +277,116 @@ public class TicketService : ITicketService
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    public async Task<IReadOnlyList<TicketListDto>> GetByAssignedAgentIdAsync(
+        int agentId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context.Tickets
+            .AsNoTracking()
+            .Where(ticket => ticket.AssignedAgentId == agentId)
+            .OrderByDescending(ticket => ticket.CreatedAt)
+            .Select(ticket => new TicketListDto
+            {
+                Id = ticket.Id,
+                Title = ticket.Title,
+                Status = ticket.Status,
+                Priority = ticket.Priority,
+                CategoryId = ticket.CategoryId,
+                CategoryName = ticket.Category.Name,
+                CustomerId = ticket.CustomerId,
+                CustomerName = ticket.Customer.FullName,
+                AssignedAgentId = ticket.AssignedAgentId,
+                AssignedAgentName = ticket.AssignedAgent == null
+                    ? null
+                    : ticket.AssignedAgent.FullName,
+                CreatedAt = ticket.CreatedAt,
+                UpdatedAt = ticket.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<TicketDetailDto?> GetAssignedAgentTicketByIdAsync(
+        int ticketId,
+        int agentId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context.Tickets
+            .AsNoTracking()
+            .Where(ticket =>
+                ticket.Id == ticketId &&
+                ticket.AssignedAgentId == agentId)
+            .Select(ticket => new TicketDetailDto
+            {
+                Id = ticket.Id,
+                Title = ticket.Title,
+                Description = ticket.Description,
+                Status = ticket.Status,
+                Priority = ticket.Priority,
+                CategoryId = ticket.CategoryId,
+                CategoryName = ticket.Category.Name,
+                CustomerId = ticket.CustomerId,
+                CustomerName = ticket.Customer.FullName,
+                CustomerEmail = ticket.Customer.Email,
+                AssignedAgentId = ticket.AssignedAgentId,
+                AssignedAgentName = ticket.AssignedAgent == null
+                    ? null
+                    : ticket.AssignedAgent.FullName,
+                CreatedAt = ticket.CreatedAt,
+                UpdatedAt = ticket.UpdatedAt,
+                ClosedAt = ticket.ClosedAt,
+                MessageCount = ticket.Messages.Count,
+                AttachmentCount = ticket.Attachments.Count
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<bool> SupportAgentIsValidAsync(
+        int agentId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .AnyAsync(
+                user =>
+                    user.Id == agentId &&
+                    user.IsActive &&
+                    user.Role == AppRoles.SupportAgent,
+                    cancellationToken
+            );
+    }
+
+    public async Task<TicketDetailDto?> AssignAgentAsync(
+        int ticketId,
+        int agentId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var ticket = await _context.Tickets
+            .SingleOrDefaultAsync(
+                ticket => ticket.Id == ticketId,
+                cancellationToken
+            );
+
+        if (ticket is null)
+        {
+            return null;
+        }
+
+        ticket.AssignedAgentId = agentId;
+        ticket.UpdatedAt = DateTime.UtcNow;
+
+        if (ticket.Status == "Open")
+        {
+            ticket.Status = "In Progress";
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(ticketId, cancellationToken);
     }
 }

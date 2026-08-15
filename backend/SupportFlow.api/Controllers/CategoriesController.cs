@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SupportFlow.Api.DTOs.Categories;
 using SupportFlow.Api.Interfaces;
+using SupportFlow.Api.Helpers;
 
 namespace SupportFlow.Api.Controllers;
 
@@ -53,6 +55,7 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }
 
+    [Authorize(Policy = AppPolicies.AdminOnly)]
     [HttpPost]
     [ProducesResponseType(
         typeof(CategoryDto),
@@ -86,6 +89,7 @@ public class CategoriesController : ControllerBase
             category);
     }
 
+    [Authorize(Policy = AppPolicies.AdminOnly)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(
         typeof(CategoryDto),
@@ -133,6 +137,7 @@ public class CategoriesController : ControllerBase
         return Ok(updatedCategory);
     }
 
+    [Authorize(Policy = AppPolicies.AdminOnly)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

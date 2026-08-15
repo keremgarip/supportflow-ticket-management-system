@@ -172,6 +172,35 @@ SupportFlow.Api
 - JWT validation checks issuer, audience, signature, and expiration.
 - Authenticated endpoints use the `Authorization: Bearer <token>` header.
 
+| Method | Endpoint | Access |
+|---|---|---|---|
+| GET | `/api/tickets` | Customer / SupportAgent / Admin, role-scoped |
+| GET | `/api/tickets/{id}` | Customer / SupportAgent / Admin, resource-scoped |
+| POST | `/api/tickets` | Customer |
+| PUT | `/api/tickets/{id}` | Owner Customer / Admin |
+| DELETE | `/api/tickets/{id}` | Owner Customer / Admin |
+| PUT | `/api/tickets/{id}/assign` | Admin |
+
+
+### Authorization
+
+SupportFlow uses role-based and resource-aware authorization.
+
+Roles:
+
+- Customer
+- SupportAgent
+- Admin
+
+Current access rules:
+
+- Customers can access only their own tickets.
+- Support agent can access only tickets assigned to them.
+- Administrators can access all tickets.
+- Only customers can create tickets
+- Only administrators can assign tickets to support agents.
+- Category management operations are restricted to administrators.
+
 ## Project Status
 
 The first month of backend development has been completed.

@@ -1,4 +1,5 @@
 using SupportFlow.Api.DTOs.Tickets;
+using SupportFlow.Api.Models;
 
 namespace SupportFlow.Api.Interfaces;
 
@@ -49,7 +50,22 @@ public interface ITicketService
         int categoryId,
         CancellationToken cancellationToken = default);
 
-    Task<bool> CustomerIsValidAsync(
-        int customerId,
-        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TicketListDto>> GetByAssignedAgentIdAsync(int agentId, CancellationToken cancellationToken = default);
+    
+    Task<TicketDetailDto?> GetAssignedAgentTicketByIdAsync(
+        int ticketId,
+        int agentId,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<bool> SupportAgentIsValidAsync(
+        int agentId,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<TicketDetailDto?> AssignAgentAsync(
+        int ticketId,
+        int agentId,
+        CancellationToken cancellationToken = default
+    );
 }

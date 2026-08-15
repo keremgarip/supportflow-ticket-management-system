@@ -3,6 +3,7 @@ using SupportFlow.Api.DTOs.Tickets;
 using SupportFlow.Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using SupportFlow.Api.Helpers;
+using SupportFlow.Api.Models;
 
 namespace SupportFlow.Api.Controllers;
 
@@ -24,11 +25,6 @@ public class TicketsController : ControllerBase
     [ProducesResponseType(
         typeof(IReadOnlyList<TicketListDto>),
         StatusCodes.Status200OK)]
-    [Authorize(Roles = AppRoles.Customer)]
-    [HttpGet]
-    [ProducesResponseType(
-    typeof(IReadOnlyList<TicketListDto>),
-    StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IReadOnlyList<TicketListDto>>> GetAll(
@@ -39,15 +35,32 @@ public class TicketsController : ControllerBase
             return Unauthorized();
         }
 
-        var tickets =
-            await _ticketService.GetByCustomerIdAsync(
-                _currentUserService.UserId.Value,
-                cancellationToken);
+        var userId = _currentUserService.UserId.Value;
 
-        return Ok(tickets);
+        if (_currentUserService.IsInRole(AppRoles.Admin))
+        {
+            var tickets = await _ticketService.GetAllAsync(cancellationToken);
+
+            return Ok(tickets);
+        }
+
+        if (_currentUserService.IsInRole(AppRoles.SupportAgent))
+        {
+            var tickets = await _ticketService.GetByAssignedAgentIdAsync(userId, cancellationToken);
+
+            return Ok(tickets);
+        }
+
+        if (_currentUserService.IsInRole(AppRoles.Customer))
+        {
+            var tickets = await _ticketService.GetByCustomerIdAsync(userId, cancellationToken);
+
+            return Ok(tickets);
+        }
+
+        return Forbid();
     }
 
-    [Authorize(Roles = AppRoles.Customer)]
     [HttpGet("{id:int}")]
     [ProducesResponseType(
     typeof(TicketDetailDto),
@@ -64,11 +77,26 @@ public class TicketsController : ControllerBase
             return Unauthorized();
         }
 
-        var ticket =
-            await _ticketService.GetCustomerTicketByIdAsync(
-                id,
-                _currentUserService.UserId.Value,
-                cancellationToken);
+        var userId = _currentUserService.UserId.Value;
+
+        TicketDetailDto? ticket;
+
+        if (_currentUserService.IsInRole(AppRoles.Admin))
+        {
+            ticket = await _ticketService.GetByIdAsync(id, cancellationToken);
+        }
+        else if (_currentUserService.IsInRole(AppRoles.SupportAgent))
+        {
+            ticket = await _ticketService.GetAssignedAgentTicketByIdAsync(id, userId, cancellationToken);
+        }
+        else if (_currentUserService.IsInRole(AppRoles.Customer))
+        {
+            ticket = await _ticketService.GetCustomerTicketByIdAsync(id, userId, cancellationToken);
+        }
+        else
+        {
+            return Forbid();
+        }
 
         if (ticket is null)
         {
@@ -125,7 +153,6 @@ public class TicketsController : ControllerBase
             ticket);
     }
 
-    [Authorize(Roles = AppRoles.Customer)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(
     typeof(TicketDetailDto),
@@ -159,12 +186,30 @@ public class TicketsController : ControllerBase
             });
         }
 
-        var updatedTicket =
-            await _ticketService.UpdateCustomerTicketAsync(
+        TicketDetailDto? updatedTicket;
+
+        if (_currentUserService.IsInRole(AppRoles.Admin))
+        {
+            updatedTicket = await _ticketService.UpdateAsync(
                 id,
-                _currentUserService.UserId.Value,
                 dto,
-                cancellationToken);
+                cancellationToken
+            );
+        }
+        else if (_currentUserService.IsInRole(AppRoles.Customer))
+        {
+            updatedTicket =
+                await _ticketService.UpdateCustomerTicketAsync(
+                    id,
+                    _currentUserService.UserId.Value,
+                    dto,
+                    cancellationToken
+                );
+        }
+        else
+        {
+            return Forbid();
+        }
 
         if (updatedTicket is null)
         {
@@ -193,11 +238,25 @@ public class TicketsController : ControllerBase
             return Unauthorized();
         }
 
-        var deleted =
-            await _ticketService.DeleteCustomerTicketAsync(
-                id,
-                _currentUserService.UserId.Value,
-                cancellationToken);
+        bool deleted;
+
+        if (_currentUserService.IsInRole(AppRoles.Admin))
+        {
+            deleted = await _ticketService.DeleteAsync(id, cancellationToken);
+        }
+        else if (_currentUserService.IsInRole(AppRoles.Customer))
+        {
+            deleted =
+                await _ticketService.DeleteCustomerTicketAsync(
+                    id,
+                    _currentUserService.UserId.Value,
+                    cancellationToken
+                );
+        }
+        else
+        {
+            return Forbid();
+        }
 
         if (!deleted)
         {
@@ -209,5 +268,49 @@ public class TicketsController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    [Authorize(Policy = AppPolicies.AdminOnly)]
+    [HttpPut("{id:int}/assign")]
+    [ProducesResponseType(
+    typeof(TicketDetailDto),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<TicketDetailDto>> AssignAgent(
+        int id,
+        AssignTicketDto dto,
+        CancellationToken cancellationToken
+    )
+    {
+        var agentIsValid = await _ticketService.SupportAgentIsValidAsync(dto.AgentId, cancellationToken);
+
+        if (!agentIsValid)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "The selected user does not exist, is inactive, " + "or does not have the SupportAgent role."
+            });
+        }
+
+        var ticket = await _ticketService.AssignAgentAsync(
+            id,
+            dto.AgentId,
+            cancellationToken
+        );
+
+        if (ticket is null)
+        {
+            return NotFound(new
+            {
+                success = false,
+                message = $"Ticket with ID {id} was not found."
+            }); 
+        }
+
+        return Ok(ticket);
     }
 }
