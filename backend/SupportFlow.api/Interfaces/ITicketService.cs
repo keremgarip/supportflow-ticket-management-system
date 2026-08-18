@@ -68,4 +68,18 @@ public interface ITicketService
         int agentId,
         CancellationToken cancellationToken = default
     );
+
+    Task<TicketStatusUpdateResultDto?> UpdateStatusAsync(
+        int ticketId,
+        string newStatus,
+        int changedByUserId,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<bool> CanUserManageTicketStatusAsync(
+        int ticketId,
+        int userId,
+        string role,
+        CancellationToken cancellationToken = default
+    );
 }

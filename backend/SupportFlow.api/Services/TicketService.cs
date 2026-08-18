@@ -83,7 +83,7 @@ public class TicketService : ITicketService
         {
             Title = dto.Title.Trim(),
             Description = dto.Description.Trim(),
-            Status = "Open",
+            Status = TicketStatuses.Open,
             Priority = dto.Priority,
             CategoryId = dto.CategoryId,
             CustomerId = customerId,
@@ -380,13 +380,79 @@ public class TicketService : ITicketService
         ticket.AssignedAgentId = agentId;
         ticket.UpdatedAt = DateTime.UtcNow;
 
-        if (ticket.Status == "Open")
+        if (ticket.Status == TicketStatuses.Open)
         {
-            ticket.Status = "In Progress";
+            ticket.Status = TicketStatuses.InProgress;
         }
 
         await _context.SaveChangesAsync(cancellationToken);
 
         return await GetByIdAsync(ticketId, cancellationToken);
+    }
+
+    public async Task<TicketStatusUpdateResultDto?> UpdateStatusAsync(int ticketId, string newStatus, int changedByUserId, CancellationToken cancellationToken = default)
+    {
+        var ticket = await _context.Tickets
+            .SingleOrDefaultAsync(
+                ticket => ticket.Id == ticketId,
+                cancellationToken
+            );
+        
+        if (ticket is null)
+        {
+            return null;
+        }
+
+        if (!TicketStatusTransitions.CanTransition(
+                ticket.Status,
+                newStatus
+        ))
+        {
+            throw new InvalidOperationException(
+                $"Ticket status cannot transition from " +
+                $"'{ticket.Status}' to '{newStatus}'.");
+        }
+        var previousStatus = ticket.Status;
+        ticket.Status = newStatus;
+        ticket.UpdatedAt = DateTime.UtcNow;
+
+        if (newStatus == TicketStatuses.Closed)
+        {
+            ticket.ClosedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return new TicketStatusUpdateResultDto
+        {
+            TicketId = ticket.Id,
+            PreviousStatus = previousStatus,
+            currentStatus = ticket.Status,
+            UpdatedAt = ticket.UpdatedAt
+        };
+    }
+
+    public async Task<bool> CanUserManageTicketStatusAsync(int ticketId, int userId, string role, CancellationToken cancellationToken = default)
+    {
+        if (role == AppRoles.Admin)
+        {
+            return await _context.Tickets
+                .AsNoTracking()
+                .AnyAsync(
+                    ticket => ticket.Id == ticketId,
+                    cancellationToken
+                );
+        }
+
+        if (role == AppRoles.SupportAgent)
+        {
+            return await _context.Tickets
+                .AsNoTracking()
+                .AnyAsync(
+                    ticket => ticket.Id == ticketId &&
+                    ticket.AssignedAgentId == userId,
+                    cancellationToken
+                );
+        }
+        return false;
     }
 }
