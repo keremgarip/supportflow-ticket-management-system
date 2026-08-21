@@ -65,7 +65,7 @@ public interface ITicketService
         CancellationToken cancellationToken = default
     );
 
-    Task<TicketStatusUpdateResultDto?> UpdateStatusAsync(
+    Task<TicketStatusUpdateServiceResult> UpdateStatusAsync(
         int ticketId,
         string newStatus,
         int changedByUserId,

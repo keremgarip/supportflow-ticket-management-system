@@ -323,4 +323,73 @@ public class TicketsController : ControllerBase
             _ => StatusCode(StatusCodes.Status500InternalServerError)
         };
     }
+
+    [Authorize(Policy = AppPolicies.AgentOrAdmin)]
+    [HttpPut("{id:int}/status")]
+    [ProducesResponseType(
+    typeof(TicketStatusUpdateResultDto),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<TicketStatusUpdateResultDto>> UpdateStatus(
+        int id,
+        UpdateTicketStatusDto dto,
+        CancellationToken cancellationToken
+    )
+    {
+        if(!_currentUserService.UserId.HasValue ||
+            string.IsNullOrWhiteSpace(_currentUserService.Role))
+        {
+            return Unauthorized();
+        }
+
+        var userId = _currentUserService.UserId.Value;
+        var role = _currentUserService.Role;
+
+        var canManageStatus =
+            await _ticketService.CanUserManageTicketStatusAsync(id, userId, role, cancellationToken);
+
+        if (!canManageStatus)
+        {
+            return NotFound(new
+            {
+                success = false,
+                message = $"Ticket with ID {id} was not found."
+            });
+        }
+
+        var result = await _ticketService.UpdateStatusAsync(id, dto.Status, userId, cancellationToken);
+
+        return result.Status switch
+        {
+            TicketStatusUpdateStatus.Success => Ok(result.Result),
+            TicketStatusUpdateStatus.TicketNotFound =>
+                NotFound(new
+                {
+                    success = false,
+                    message = $"Ticket with ID {id} was not found."
+                }),
+            TicketStatusUpdateStatus.InvalidTransition =>
+                Conflict(new
+                {
+                    success = false,
+                    message =
+                        $"Ticket status cannot transition from " +
+                        $"'{result.CurrentStatus}' to " +
+                        $"'{result.RequestedStatus}'."
+                }),
+            TicketStatusUpdateStatus.AgentAssignmentRequired =>
+                Conflict(new
+                {
+                    success = false,
+                    message = "A ticket must be assigned to a support agent " +
+                    "before it can move to In Progress."
+                }),
+            
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
+    }
 }

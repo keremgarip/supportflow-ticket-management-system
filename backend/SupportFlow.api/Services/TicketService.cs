@@ -266,7 +266,7 @@ public class TicketService : ITicketService
                     ticket.CustomerId == customerId,
                     cancellationToken
             );
-        
+
         if (ticket is null)
         {
             return false;
@@ -424,17 +424,30 @@ public class TicketService : ITicketService
         };
     }
 
-    public async Task<TicketStatusUpdateResultDto?> UpdateStatusAsync(int ticketId, string newStatus, int changedByUserId, CancellationToken cancellationToken = default)
+    public async Task<TicketStatusUpdateServiceResult> UpdateStatusAsync(int ticketId, string newStatus, int changedByUserId, CancellationToken cancellationToken = default)
     {
         var ticket = await _context.Tickets
             .SingleOrDefaultAsync(
                 ticket => ticket.Id == ticketId,
                 cancellationToken
             );
-        
+
         if (ticket is null)
         {
-            return null;
+            return new TicketStatusUpdateServiceResult
+            {
+                Status = TicketStatusUpdateStatus.TicketNotFound
+            };
+        }
+
+        if (newStatus == TicketStatuses.InProgress && ticket.AssignedAgentId is null)
+        {
+            return new TicketStatusUpdateServiceResult
+            {
+                Status = TicketStatusUpdateStatus.AgentAssignmentRequired,
+                CurrentStatus = ticket.Status,
+                RequestedStatus = newStatus
+            };
         }
 
         if (!TicketStatusTransitions.CanTransition(
@@ -442,26 +455,42 @@ public class TicketService : ITicketService
                 newStatus
         ))
         {
-            throw new InvalidOperationException(
-                $"Ticket status cannot transition from " +
-                $"'{ticket.Status}' to '{newStatus}'.");
+            return new TicketStatusUpdateServiceResult
+            {
+                Status = TicketStatusUpdateStatus.InvalidTransition,
+                CurrentStatus = ticket.Status,
+                RequestedStatus = newStatus
+            };
         }
+
         var previousStatus = ticket.Status;
+        var updatedAt = DateTime.UtcNow;
+
         ticket.Status = newStatus;
-        ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.UpdatedAt = updatedAt;
 
         if (newStatus == TicketStatuses.Closed)
         {
-            ticket.ClosedAt = DateTime.UtcNow;
+            ticket.ClosedAt = updatedAt;
+        }
+        else
+        {
+            ticket.ClosedAt = null;
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        return new TicketStatusUpdateResultDto
+        return new TicketStatusUpdateServiceResult
         {
-            TicketId = ticket.Id,
-            PreviousStatus = previousStatus,
-            currentStatus = ticket.Status,
-            UpdatedAt = ticket.UpdatedAt
+            Status = TicketStatusUpdateStatus.Success,
+
+            Result = new TicketStatusUpdateResultDto
+            {
+                TicketId = ticket.Id,
+                PreviousStatus = previousStatus,
+                currentStatus = ticket.Status,
+                UpdatedAt = ticket.UpdatedAt
+            }
+
         };
     }
 
