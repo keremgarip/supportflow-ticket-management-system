@@ -58,12 +58,8 @@ public interface ITicketService
         CancellationToken cancellationToken = default
     );
 
-    Task<bool> SupportAgentIsValidAsync(
-        int agentId,
-        CancellationToken cancellationToken = default
-    );
 
-    Task<TicketDetailDto?> AssignAgentAsync(
+    Task<TicketAssignmentServiceResult> AssignAgentAsync(
         int ticketId,
         int agentId,
         CancellationToken cancellationToken = default

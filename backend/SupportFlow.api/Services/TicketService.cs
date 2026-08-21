@@ -344,23 +344,7 @@ public class TicketService : ITicketService
             .SingleOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<bool> SupportAgentIsValidAsync(
-        int agentId,
-        CancellationToken cancellationToken = default
-    )
-    {
-        return await _context.Users
-            .AsNoTracking()
-            .AnyAsync(
-                user =>
-                    user.Id == agentId &&
-                    user.IsActive &&
-                    user.Role == AppRoles.SupportAgent,
-                    cancellationToken
-            );
-    }
-
-    public async Task<TicketDetailDto?> AssignAgentAsync(
+    public async Task<TicketAssignmentServiceResult> AssignAgentAsync(
         int ticketId,
         int agentId,
         CancellationToken cancellationToken = default
@@ -374,8 +358,46 @@ public class TicketService : ITicketService
 
         if (ticket is null)
         {
-            return null;
+            return new TicketAssignmentServiceResult
+            {
+                Status = TicketAssignmentStatus.TicketNotFound
+            };
         }
+
+        if (ticket.Status == TicketStatuses.Closed)
+        {
+            return new TicketAssignmentServiceResult
+            {
+                Status = TicketAssignmentStatus.TicketClosed
+            };
+        }
+
+        var agent = await _context.Users
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                user => user.Id == agentId &&
+                user.IsActive &&
+                user.Role == AppRoles.SupportAgent,
+                cancellationToken
+            );
+
+        if (agent is null)
+        {
+            return new TicketAssignmentServiceResult
+            {
+                Status = TicketAssignmentStatus.AgentNotFoundOrInvalid
+            };
+        }
+
+        if (ticket.AssignedAgentId == agentId)
+        {
+            return new TicketAssignmentServiceResult
+            {
+                Status = TicketAssignmentStatus.AlreadyAssignedToAgent
+            };
+        }
+
+        var previousStatus = ticket.Status;
 
         ticket.AssignedAgentId = agentId;
         ticket.UpdatedAt = DateTime.UtcNow;
@@ -387,7 +409,19 @@ public class TicketService : ITicketService
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return await GetByIdAsync(ticketId, cancellationToken);
+        return new TicketAssignmentServiceResult
+        {
+            Status = TicketAssignmentStatus.Success,
+            Assignment = new TicketAssignmentResultDto
+            {
+                TicketId = ticket.Id,
+                AgentId = agent.Id,
+                AgentName = agent.FullName,
+                PreviousStatus = previousStatus,
+                CurrentStatus = ticket.Status,
+                UpdatedAt = ticket.UpdatedAt
+            }
+        };
     }
 
     public async Task<TicketStatusUpdateResultDto?> UpdateStatusAsync(int ticketId, string newStatus, int changedByUserId, CancellationToken cancellationToken = default)

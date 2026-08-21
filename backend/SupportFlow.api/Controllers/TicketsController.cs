@@ -273,44 +273,54 @@ public class TicketsController : ControllerBase
     [Authorize(Policy = AppPolicies.AdminOnly)]
     [HttpPut("{id:int}/assign")]
     [ProducesResponseType(
-    typeof(TicketDetailDto),
+    typeof(TicketAssignmentResultDto),
     StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<TicketDetailDto>> AssignAgent(
+    public async Task<ActionResult<TicketAssignmentResultDto>> AssignAgent(
         int id,
         AssignTicketDto dto,
         CancellationToken cancellationToken
     )
     {
-        var agentIsValid = await _ticketService.SupportAgentIsValidAsync(dto.AgentId, cancellationToken);
+        var result = await _ticketService.AssignAgentAsync(id, dto.AgentId, cancellationToken);
 
-        if (!agentIsValid)
+        return result.Status switch
         {
-            return BadRequest(new
-            {
-                success = false,
-                message = "The selected user does not exist, is inactive, " + "or does not have the SupportAgent role."
-            });
-        }
+            TicketAssignmentStatus.Success => Ok(result.Assignment),
+            TicketAssignmentStatus.TicketNotFound =>
+                NotFound(new
+                {
+                    success = false,
+                    message = $"Ticket with ID {id} was not found."
+                }),
 
-        var ticket = await _ticketService.AssignAgentAsync(
-            id,
-            dto.AgentId,
-            cancellationToken
-        );
-
-        if (ticket is null)
-        {
-            return NotFound(new
-            {
-                success = false,
-                message = $"Ticket with ID {id} was not found."
-            }); 
-        }
-
-        return Ok(ticket);
+            TicketAssignmentStatus.AgentNotFoundOrInvalid =>
+                BadRequest(new
+                {
+                    success = false,
+                    message = "The selected user does not exist, is inactive, " +
+                                "or does not have the SupportAgent role."
+                }),
+            
+            TicketAssignmentStatus.AlreadyAssignedToAgent =>
+                Conflict(new
+                {
+                    success = false,
+                    message = "The ticket is already assigned to this support agent."
+                }),
+            
+            TicketAssignmentStatus.TicketClosed =>
+                NotFound(new
+                {
+                    success = false,
+                    message = "A closed ticket cannot be assigned to a support agent."
+                }),
+            
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
     }
 }
