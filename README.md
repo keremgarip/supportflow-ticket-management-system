@@ -181,7 +181,6 @@ SupportFlow.Api
 | DELETE | `/api/tickets/{id}` | Owner Customer / Admin |
 | PUT | `/api/tickets/{id}/assign` | Admin |
 
-
 ### Authorization
 
 SupportFlow uses role-based and resource-aware authorization.
@@ -200,6 +199,23 @@ Current access rules:
 - Only customers can create tickets
 - Only administrators can assign tickets to support agents.
 - Category management operations are restricted to administrators.
+
+### Ticket Workflow
+
+SupportFlow currently supports:
+
+- Ticket assignment my administrators
+- Support-agent scoped ticket access
+- Controlled ticket status transitions
+- Automatic transition from Open to In Progress when an agent is assigned
+- Ticket status history tracking
+- User and role information for every recorded status change
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| PUT | `/api/tickets/{id}/assign` | Assigns a support agent | Admin |
+| PUT | `/api/tickets/{id}/status` | Updates ticket status | Assigned Agent / Admin |
+| GET | `/api/tickets/{id}/status-history` | Returns ticket status history | Resource-scoped |
 
 ## Project Status
 

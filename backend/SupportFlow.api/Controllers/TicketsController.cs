@@ -286,7 +286,12 @@ public class TicketsController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        var result = await _ticketService.AssignAgentAsync(id, dto.AgentId, cancellationToken);
+        if (!_currentUserService.UserId.HasValue)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _ticketService.AssignAgentAsync(id, dto.AgentId, _currentUserService.UserId.Value, cancellationToken);
 
         return result.Status switch
         {
@@ -305,21 +310,21 @@ public class TicketsController : ControllerBase
                     message = "The selected user does not exist, is inactive, " +
                                 "or does not have the SupportAgent role."
                 }),
-            
+
             TicketAssignmentStatus.AlreadyAssignedToAgent =>
                 Conflict(new
                 {
                     success = false,
                     message = "The ticket is already assigned to this support agent."
                 }),
-            
+
             TicketAssignmentStatus.TicketClosed =>
                 NotFound(new
                 {
                     success = false,
                     message = "A closed ticket cannot be assigned to a support agent."
                 }),
-            
+
             _ => StatusCode(StatusCodes.Status500InternalServerError)
         };
     }
@@ -340,7 +345,7 @@ public class TicketsController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        if(!_currentUserService.UserId.HasValue ||
+        if (!_currentUserService.UserId.HasValue ||
             string.IsNullOrWhiteSpace(_currentUserService.Role))
         {
             return Unauthorized();
@@ -388,8 +393,61 @@ public class TicketsController : ControllerBase
                     message = "A ticket must be assigned to a support agent " +
                     "before it can move to In Progress."
                 }),
-            
+
             _ => StatusCode(StatusCodes.Status500InternalServerError)
         };
+    }
+
+    [HttpGet("{id:int}/status-history")]
+    [ProducesResponseType(
+    typeof(IReadOnlyList<TicketStatusHistoryDto>),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<TicketStatusHistoryDto>>> GetStatusHistory(
+        int id,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!_currentUserService.UserId.HasValue)
+        {
+            return Unauthorized();
+        }
+
+        var userId = _currentUserService.UserId.Value;
+
+        TicketDetailDto? accessibleTicket;
+
+        if (_currentUserService.IsInRole(AppRoles.Admin))
+        {
+            accessibleTicket = await _ticketService.GetByIdAsync(id, cancellationToken);
+        }
+        else if (_currentUserService.IsInRole(AppRoles.SupportAgent))
+        {
+            accessibleTicket = await _ticketService.GetAssignedAgentTicketByIdAsync(id, userId, cancellationToken);
+        }
+        else if (_currentUserService.IsInRole(AppRoles.Customer))
+        {
+            accessibleTicket = await _ticketService.GetCustomerTicketByIdAsync(id, userId, cancellationToken);
+        }
+        else
+        {
+            return Forbid();
+        }
+
+        if (accessibleTicket is null)
+        {
+            return NotFound(new
+            {
+                success = false,
+                message = $"Ticket with ID {id} was not found."
+            });
+        }
+
+        var history =
+            await _ticketService.GetStatusHistoryAsync(id, cancellationToken);
+
+        return Ok(history);
     }
 }

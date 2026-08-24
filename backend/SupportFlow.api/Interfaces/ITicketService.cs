@@ -62,6 +62,7 @@ public interface ITicketService
     Task<TicketAssignmentServiceResult> AssignAgentAsync(
         int ticketId,
         int agentId,
+        int assignedByUserId,
         CancellationToken cancellationToken = default
     );
 
@@ -76,6 +77,11 @@ public interface ITicketService
         int ticketId,
         int userId,
         string role,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<IReadOnlyList<TicketStatusHistoryDto>> GetStatusHistoryAsync(
+        int ticketId,
         CancellationToken cancellationToken = default
     );
 }

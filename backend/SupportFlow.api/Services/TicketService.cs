@@ -347,6 +347,7 @@ public class TicketService : ITicketService
     public async Task<TicketAssignmentServiceResult> AssignAgentAsync(
         int ticketId,
         int agentId,
+        int assignedByUserId,
         CancellationToken cancellationToken = default
     )
     {
@@ -398,13 +399,25 @@ public class TicketService : ITicketService
         }
 
         var previousStatus = ticket.Status;
+        var updatedAt = DateTime.UtcNow;
 
         ticket.AssignedAgentId = agentId;
-        ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.UpdatedAt = updatedAt;
 
         if (ticket.Status == TicketStatuses.Open)
         {
             ticket.Status = TicketStatuses.InProgress;
+
+            var history = new TicketStatusHistory
+            {
+                TicketId = ticket.Id,
+                OldStatus = TicketStatuses.Open,
+                NewStatus = TicketStatuses.InProgress,
+                ChangedByUserId = assignedByUserId,
+                ChangedAt = updatedAt
+            };
+
+            _context.TicketStatusHistories.Add(history);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -478,7 +491,19 @@ public class TicketService : ITicketService
             ticket.ClosedAt = null;
         }
 
+        var history = new TicketStatusHistory
+        {
+           TicketId = ticket.Id,
+           OldStatus = previousStatus,
+           NewStatus = newStatus,
+           ChangedByUserId = changedByUserId,
+           ChangedAt = updatedAt  
+        };
+
+        _context.TicketStatusHistories.Add(history);
+
         await _context.SaveChangesAsync(cancellationToken);
+
         return new TicketStatusUpdateServiceResult
         {
             Status = TicketStatusUpdateStatus.Success,
@@ -517,5 +542,25 @@ public class TicketService : ITicketService
                 );
         }
         return false;
+    }
+
+    public async Task<IReadOnlyList<TicketStatusHistoryDto>> GetStatusHistoryAsync(int ticketId, CancellationToken cancellationToken = default)
+    {
+        return await _context.TicketStatusHistories
+            .AsNoTracking()
+            .Where(history => history.TicketId == ticketId)
+            .OrderBy(history => history.ChangedAt)
+            .Select(history => new TicketStatusHistoryDto
+            {
+                Id = history.Id,
+                TicketId = history.TicketId,
+                OldStatus = history.OldStatus,
+                NewStatus = history.NewStatus,
+                ChangedByUserId = history.ChangedByUserId,
+                ChangedByUserName = history.ChangedByUser.FullName,
+                ChangedByUserRole = history.ChangedByUser.Role,
+                ChangedAt = history.ChangedAt
+            })
+            .ToListAsync(cancellationToken);
     }
 }
