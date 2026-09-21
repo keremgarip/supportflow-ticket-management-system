@@ -122,6 +122,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 
+builder.Services.AddScoped<ITicketMessageService, TicketMessageService>();
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi(options =>
 {
