@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SupportFlow.Api.Data;
+using SupportFlow.Api.DTOs.Messages;
 using SupportFlow.Api.Helpers;
 using SupportFlow.Api.Interfaces;
 
@@ -49,5 +50,23 @@ public class TicketMessageService : ITicketMessageService
         }
 
         return false;
+    }
+
+    public async Task<IReadOnlyList<TicketMessageDto>> GetMessagesAsync(int ticketId, CancellationToken cancellationToken = default)
+    {
+        return await _context.TicketMessages
+        .AsNoTracking()
+        .Where(message => message.TicketId == ticketId)
+        .OrderBy(message => message.CreatedAt)
+        .ThenBy(message => message.Id)
+        .Select(message => new TicketMessageDto
+        {
+            Id = message.Id,
+            SenderName = message.Sender.FullName,
+            SenderRole = message.Sender.Role,
+            Message = message.Message,
+            CreatedAt = message.CreatedAt
+        })
+        .ToListAsync(cancellationToken);
     }
 }
